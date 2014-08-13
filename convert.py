@@ -7,6 +7,7 @@ import shutil
 import sys
 from meta import Meta
 import traceback
+import numpy as np
 
 
 class DataBaseManager(sqlite3.Cursor):
@@ -110,43 +111,23 @@ def convert(fileOrigin, fileDestination):
 
 def metaData(fileOrigin, dbPath):
 
-    dirs = fileOrigin.split('/')
-    kindIndex = dirs.index('TV Show')
+    dirs = np.array(fileOrigin.split('/'))
+
+    kindIndex = np.where((dirs == 'TV show')|(dirs=='Movie'))
+    if len(kindIndex) != 1:
+        raise Except("Problem with path")
+
+    tvshow, season, episode = getInfo(fileOrigin)
 
     metaD = {}
-    # videoKind, showName, seasonNumber, episodeNumber
-    videoKind = 'Movie'
-    if len(dirs) - 2 > kindIndex:
-        # return 'Movie', None, None, None
-        videoKind = 'TV show'
-    metaD['videoKind'] = videoKind
+    metaD['videoKind'] = dirs[kindIndex[0]]
+    metaD['showName'] = tvshow
+    metaD['seasonNumber'] = season
+    metaD['episodeNumber'] = episode
 
-
-    showNameIndex = kindIndex + 1
-    showName = None
-    if len(dirs) - 2 >= showNameIndex:
-        showName = dirs[showNameIndex]
-        # return 'TV show', dirs[showNameIndex], None, None
-    metaD['showName'] = showName
-
-    seasonNumberIndex = kindIndex + 2
-    seasonNumber = None
-    if len(dirs) - 2 >= seasonNumberIndex:
-        seasonNumber = int(dirs[seasonNumberIndex])
-        # return 'TV show', dirs[showNameIndex], dirs[seasonNumberIndex], None
-    metaD['seasonNumber'] = seasonNumber
-
-    episodeNumberIndex = kindIndex + 3
-    # TV Show name and season number specified
-    episodeNumber = None
-    if len(dirs) - 2 >= episodeNumberIndex:
-        episodeNumber = int(dirs[episodeNumberIndex])
-        # return 'TV show', dirs[showNameIndex], dirs[seasonNumberIndex], dirs[episodeNumberIndex]
-    metaD['episodeNumber'] = episodeNumber
-
-    if showName is not None and seasonNumber is not None and episodeNumber is not None:
+    if tvshow is not None and season is not None and episode is not None:
         meta = Meta(dbPath)
-        soup = meta.get_meta(showName, seasonNumber, episodeNumber)
+        soup = meta.get_meta(tvshow, season, episode)
         print("Episode Name and Description: {}".format(soup))
         if soup is None:
             metaD['episodeName'] = None
@@ -160,6 +141,26 @@ def metaData(fileOrigin, dbPath):
         metaD['episodeDescription'] = None
 
     return metaD
+
+
+def getInfo(origin):
+
+    p = re.compile('(([a-zA-Z]+[\.\s])+)([Ss]([\d]+)[Ee]([\d]+)|[Ss]eason ([\d]+) [Ee]pisode ([\d]+))')
+    f = origin.split('/')[-1]
+    m = p.findall(f)
+    if len(m) == 0:
+        return None, None, None
+    m = m[0]
+#     print m
+    tvshow = m[0].replace('.',' ').strip()
+    for i in reversed(range(len(m))):
+        if m[i] == '':
+            continue
+        else:
+            episode = m[i]
+            season = m[i-1]
+            break
+    return str(tvshow), int(season), int(episode)
 
 
 def importiTunes(fileOrigin, videoKind, showName, seasonNumber, episodeNumber, episodeName, episodeDescription):
