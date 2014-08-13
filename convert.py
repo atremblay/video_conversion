@@ -119,9 +119,10 @@ def metaData(fileOrigin, dbPath):
 
     tvshow, season, episode = getInfo(fileOrigin)
 
+    kindIndex = kindIndex[0]
     metaD = {}
-    metaD['videoKind'] = dirs[kindIndex[0]]
-    metaD['showName'] = tvshow
+    metaD['videoKind'] = dirs[kindIndex]
+    metaD['showName'] = dirs[kindIndex + 1]
     metaD['seasonNumber'] = season
     metaD['episodeNumber'] = episode
 
